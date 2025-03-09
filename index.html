@@ -1,1 +1,271 @@
+<!DOCTYPE html>
+<html>
 
+<head>
+    <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/aframe-html-shader@1.5.0/dist/aframe-html-shader.min.js"></script>
+    <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
+
+    <script>
+        AFRAME.registerComponent('marker-sound', {
+            init: function() {
+                this.marker = this.el;  // marker element
+                this.audio = this.el.querySelector('a-sound').components.sound;  // sound component
+                
+                this.marker.addEventListener('markerFound', () => {
+                    // Play sound when marker is found
+                    if (this.audio) {
+                        this.audio.playSound();
+                    }
+                });
+                
+                this.marker.addEventListener('markerLost', () => {
+                    // Pause sound when marker is lost
+                    if (this.audio) {
+                        this.audio.pauseSound();
+                    }
+                });
+            }
+        });
+        </script>
+
+    <script>
+        AFRAME.registerComponent('smooth', {
+            schema: {
+                smoothCount: { type: 'number', default: 10 },
+                smoothTolerance: { type: 'number', default: 0.01 },
+                smoothThreshold: { type: 'number', default: 2 },
+            },
+
+            init: function () {
+                this.previousPosition = new THREE.Vector3();
+                this.previousRotation = new THREE.Euler();
+                this.previousVisible = false;
+                this.positions = [];
+                this.rotations = [];
+            },
+
+            tick: function () {
+                const marker = this.el;
+                const object3D = marker.object3D;
+                const { smoothCount, smoothTolerance, smoothThreshold } = this.data;
+
+                if (!object3D.visible && this.previousVisible) {
+                    // Store last known position when marker disappears
+                    object3D.position.copy(this.previousPosition);
+                    object3D.rotation.copy(this.previousRotation);
+                } else if (object3D.visible) {
+                    // Position smoothing
+                    this.positions.push(object3D.position.clone());
+                    if (this.positions.length > smoothCount) {
+                        this.positions.shift();
+                    }
+
+                    // Rotation smoothing
+                    this.rotations.push(new THREE.Euler().copy(object3D.rotation));
+                    if (this.rotations.length > smoothCount) {
+                        this.rotations.shift();
+                    }
+
+                    if (this.positions.length >= smoothCount) {
+                        // Apply smoothing
+                        const smoothedPosition = new THREE.Vector3();
+                        const smoothedRotation = new THREE.Euler();
+
+                        // Average positions
+                        this.positions.forEach(pos => smoothedPosition.add(pos));
+                        smoothedPosition.divideScalar(this.positions.length);
+
+                        // Average rotations
+                        this.rotations.forEach(rot => {
+                            smoothedRotation.x += rot.x;
+                            smoothedRotation.y += rot.y;
+                            smoothedRotation.z += rot.z;
+                        });
+                        smoothedRotation.x /= this.rotations.length;
+                        smoothedRotation.y /= this.rotations.length;
+                        smoothedRotation.z /= this.rotations.length;
+
+                        // Apply smoothed values if change is within tolerance
+                        if (smoothedPosition.distanceTo(object3D.position) < smoothThreshold) {
+                            object3D.position.lerp(smoothedPosition, smoothTolerance);
+                            object3D.rotation.set(
+                                THREE.MathUtils.lerp(object3D.rotation.x, smoothedRotation.x, smoothTolerance),
+                                THREE.MathUtils.lerp(object3D.rotation.y, smoothedRotation.y, smoothTolerance),
+                                THREE.MathUtils.lerp(object3D.rotation.z, smoothedRotation.z, smoothTolerance)
+                            );
+                        }
+                    }
+
+                    // Store current values
+                    this.previousPosition.copy(object3D.position);
+                    this.previousRotation.copy(object3D.rotation);
+                }
+                this.previousVisible = object3D.visible;
+            }
+        });
+    </script>
+
+    <script>
+        AFRAME.registerComponent('play-all-model-animations', {
+            init: function () {
+                this.model = null;
+                this.mixer = null;
+
+                var model = this.el.getObject3D('mesh');
+                if (model) {
+                    this.load(model);
+                } else {
+                    this.el.addEventListener('model-loaded', e => {
+                        this.load(e.detail.model);
+                    });
+                }
+            },
+
+            load: function (model) {
+                this.model = model;
+                this.mixer = new THREE.AnimationMixer(model);
+
+                if (this.model.animations.length) {
+                    this.model.animations.forEach(animation => {
+                        let action = this.mixer.clipAction(animation);
+                        action.play();
+                    });
+                }
+            },
+
+            tick: function (t, dt) {
+                if (this.mixer) {
+                    this.mixer.update(dt / 1000);
+                }
+            }
+        });
+    </script>
+
+
+    <script>
+        AFRAME.registerComponent('gesture-handler', {
+            schema: {
+                enabled: { default: true },
+                rotationFactor: { default: 5 },
+                minScale: { default: 0.3 },
+                maxScale: { default: 8 },
+            },
+
+            init: function () {
+                this.handleScale = this.handleScale.bind(this);
+                this.handleRotation = this.handleRotation.bind(this);
+
+                this.isVisible = false;
+                this.initialScale = this.el.object3D.scale.clone();
+                this.scaleFactor = 1;
+
+                this.el.sceneEl.addEventListener("markerFound", (e) => {
+                    this.isVisible = true;
+                });
+
+                this.el.sceneEl.addEventListener("markerLost", (e) => {
+                    this.isVisible = false;
+                });
+            },
+
+            handleRotation: function (event) {
+                if (this.isVisible) {
+                    this.el.object3D.rotation.y +=
+                        event.detail.positionChange.x * this.data.rotationFactor;
+                    this.el.object3D.rotation.x +=
+                        event.detail.positionChange.y * this.data.rotationFactor;
+                }
+            },
+
+            handleScale: function (event) {
+                if (this.isVisible) {
+                    this.scaleFactor *=
+                        1 + event.detail.spreadChange / event.detail.startSpread;
+
+                    this.scaleFactor = Math.min(
+                        Math.max(this.scaleFactor, this.data.minScale),
+                        this.data.maxScale
+                    );
+
+                    this.el.object3D.scale.x = this.scaleFactor * this.initialScale.x;
+                    this.el.object3D.scale.y = this.scaleFactor * this.initialScale.y;
+                    this.el.object3D.scale.z = this.scaleFactor * this.initialScale.z;
+                }
+            },
+        });
+
+
+
+
+    </script>
+
+
+</head>
+
+<body>
+
+
+
+
+    <a-scene embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; patternRatio:0.80"
+        gesture-detector>
+
+
+        <!-- Apple -->
+        <a-marker id="apple-marker" persistent-marker type="pattern"
+            smooth="smoothCount: 10; smoothTolerance: 0.01; smoothThreshold: 2"
+            url="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/pattern-apple.patt?v=1741421635577">
+            <a-entity position="0 0 0" scale="0.3 0.3 0.3" rotation="0 0 0" animation-mixer class="clickable"
+                gesture-handler="minScale: 0.05; maxScale: 10; rotationFactor: 5"
+                gltf-model="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/apple.glb?v=1741421700103">
+            </a-entity>
+        </a-marker>
+
+        <!-- Ball -->
+        <a-marker id="ball-marker" persistent-marker type="pattern"
+            smooth="smoothCount: 10; smoothTolerance: 0.01; smoothThreshold: 2"
+            url="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/pattern-ball.patt?v=1741421649861">
+            <a-entity position="0 0 0" scale="1 1 1" rotation="0 0 0" animation-mixer class="clickable"
+                gesture-handler="minScale: 0.05; maxScale: 10; rotationFactor: 5"
+                gltf-model="https://cdn.glitch.me/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/ball.glb?v=1741421725121">
+            </a-entity>
+        </a-marker>
+
+        <!-- Cat -->
+        <a-marker id="cat-marker" marker-sound persistent-marker type="pattern"
+            smooth="smoothCount: 10; smoothTolerance: 0.01; smoothThreshold: 2"
+            url="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/pattern-cat.patt?v=1741466605753">
+            <a-entity position="0 0 0" scale="1.5 1.5 1.5" rotation="-90 180 180" animation-mixer class="clickable"
+                gesture-handler="minScale: 0.05; maxScale: 10; rotationFactor: 5"
+                gltf-model="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/cat1.1.glb?v=1741466332218">
+            </a-entity>
+            <a-sound
+                src="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/cat-meow-8-fx-306184.mp3?v=1741467434044"
+                autoplay="false" loop="true" position="0 0 0" volume="1.0"></a-sound>
+        </a-marker>
+      
+       <!-- elephant -->
+        <a-marker id="elephant-marker" marker-sound persistent-marker type="pattern"
+            smooth="smoothCount: 10; smoothTolerance: 0.01; smoothThreshold: 2"
+            url="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/pattern-elephant.patt?v=1741498272346">
+            <a-entity position="0 0 0" scale="0.05 0.05 0.05" rotation="-90 180 180" animation-mixer class="clickable"
+                gesture-handler="minScale: 0.05; maxScale: 10; rotationFactor: 5"
+                gltf-model="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/elephant.glb?v=1741496930904">
+            </a-entity>
+            <a-sound
+                src="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/elephant.glb?v=1741496930904"
+                autoplay="false" loop="true" position="0 0 0" volume="1.0"></a-sound>
+        </a-marker>
+  
+
+
+
+
+        <a-entity camera></a-entity>
+    </a-scene>
+</body>
+
+</html>
