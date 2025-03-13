@@ -210,8 +210,13 @@
 
 
 
-    <a-scene embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; patternRatio:0.80"
-        gesture-detector>
+       <a-scene embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; patternRatio:0.80"
+        gesture-detector renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true;">
+
+
+        <a-light type="ambient" intensity="0.7"></a-light>
+        <a-light type="directional" position="1 1 1" intensity="0.8" color="#FFF">
+        </a-light>
 
 
         <!-- Apple -->
@@ -328,6 +333,18 @@
             <a-entity position="0 0 0" scale="0.3 0.3 0.3" rotation="180 0 0" animation-mixer class="clickable"
                 gesture-handler="minScale: 0.05; maxScale: 10; rotationFactor: 5"
                 gltf-model="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/jeep.glb?v=1741613744430">
+            </a-entity>
+
+        </a-marker>
+         
+         
+          <!-- key -->
+        <a-marker id="key-marker" marker-sound persistent-marker type="pattern"
+            smooth="smoothCount: 10; smoothTolerance: 0.01; smoothThreshold: 2"
+            url="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/pattern-key.patt?v=1741859456266">
+            <a-entity position="0 0 0" scale="0.3 0.3 0.3" rotation="-90 0 0" animation-mixer class="clickable"
+                gesture-handler="minScale: 0.05; maxScale: 10; rotationFactor: 5"
+                gltf-model="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/key.glb?v=1741859504495">
             </a-entity>
 
         </a-marker>
@@ -457,15 +474,15 @@
       
       
               <!-- violin -->
-<!--         <a-marker id="violin-marker" marker-sound persistent-marker type="pattern"
+        <a-marker id="violin-marker" marker-sound persistent-marker type="pattern"
             smooth="smoothCount: 10; smoothTolerance: 0.01; smoothThreshold: 2"
-            url="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/pattern-elephant.patt?v=1741498272346">
+            url="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/pattern-violin.patt?v=1741809516516">
             <a-entity position="0 0 0" scale="0.6 0.6 0.6" rotation="-90 0 0" animation-mixer class="clickable"
                 gesture-handler="minScale: 0.05; maxScale: 10; rotationFactor: 5"
                 gltf-model="https://cdn.glitch.me/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/violin.glb?v=1741627264283">
             </a-entity>
 
-        </a-marker> -->
+        </a-marker>
       
       
           <!-- watermelon -->
@@ -492,16 +509,28 @@
         </a-marker>
       
       
-              <!-- zebra -->
-<!--         <a-marker id="xmas-marker" marker-sound persistent-marker type="pattern"
+           <!-- yacht -->
+        <a-marker id="yacht-marker" marker-sound persistent-marker type="pattern"
             smooth="smoothCount: 10; smoothTolerance: 0.01; smoothThreshold: 2"
-            url="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/pattern-elephant.patt?v=1741498272346">
+            url="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/pattern-yatch.patt?v=1741813572759">
+            <a-entity position="0 0 0" scale="0.2 0.2 0.2" rotation="-90 0 0" animation-mixer class="clickable"
+                gesture-handler="minScale: 0.05; maxScale: 10; rotationFactor: 5"
+                gltf-model="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/yatch.glb?v=1741813568223">
+            </a-entity>
+
+        </a-marker>
+      
+      
+              <!-- zebra -->
+        <a-marker id="zebra-marker" marker-sound persistent-marker type="pattern"
+            smooth="smoothCount: 10; smoothTolerance: 0.01; smoothThreshold: 2"
+            url="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/pattern-zebra.patt?v=1741807930148">
             <a-entity position="0 0 0" scale="0.35 0.35 0.35" rotation="-90 0 0" animation-mixer class="clickable"
                 gesture-handler="minScale: 0.05; maxScale: 10; rotationFactor: 5"
                 gltf-model="https://cdn.glitch.global/a5706bbe-b8cc-48d3-a3e2-19c6a43998ec/zebra.glb?v=1741551247631">
             </a-entity>
 
-        </a-marker> -->
+        </a-marker>
       
 
 
